@@ -168,6 +168,7 @@ class WorkerStageMixin:
             container_mounts=self.runtime.container_mounts,
             env_to_set=env_to_set,
             bash_preamble=bash_preamble,
+            srun_options=self.runtime.srun_options,
         )
 
         return ManagedProcess(

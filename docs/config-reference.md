@@ -417,6 +417,7 @@ Benchmark configuration. The `type` field determines which benchmark runner is u
 | ----------------- | ---------------------------------------------- |
 | `manual`          | No benchmark (default), manual testing mode    |
 | `sa-bench`        | Throughput/latency serving benchmark           |
+e| `sglang-bench`    | SGLang bench_serving benchmark                 |
 | `mmlu`            | MMLU accuracy evaluation                       |
 | `gpqa`            | GPQA (Graduate-level science QA) evaluation    |
 | `longbenchv2`     | Long-context evaluation benchmark              |
@@ -439,6 +440,28 @@ Throughput and latency benchmark at various concurrency levels.
 ```yaml
 benchmark:
   type: "sa-bench"
+  isl: 1024                          # Required: Input sequence length
+  osl: 1024                          # Required: Output sequence length
+  concurrencies: [256, 512]          # Required: Concurrency levels to test
+  req_rate: "inf"                    # Optional: Request rate (default: "inf")
+```
+
+| Field           | Type        | Required | Default | Description                                |
+| --------------- | ----------- | -------- | ------- | ------------------------------------------ |
+| `isl`           | int         | Yes      | -       | Input sequence length                      |
+| `osl`           | int         | Yes      | -       | Output sequence length                     |
+| `concurrencies` | list/string | Yes      | -       | Concurrency levels (list or "NxM" format)  |
+| `req_rate`      | string/int  | No       | "inf"   | Request rate                               |
+
+**Concurrencies format**: Can be a list `[128, 256, 512]` or x-separated string `"128x256x512"`.
+
+### sglang-bench
+
+SGLang `bench_serving` benchmark at various concurrency levels.
+
+```yaml
+benchmark:
+  type: "sglang-bench"
   isl: 1024                          # Required: Input sequence length
   osl: 1024                          # Required: Output sequence length
   concurrencies: [256, 512]          # Required: Concurrency levels to test

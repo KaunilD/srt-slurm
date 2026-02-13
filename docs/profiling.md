@@ -173,7 +173,7 @@ After profiling completes, find results in the job's log directory:
 
 Torch profiler traces example:
 
-```
+```text
 logs/{job_id}_{workers}_{timestamp}/
 └── profiles/
     ├── prefill/
@@ -184,7 +184,7 @@ logs/{job_id}_{workers}_{timestamp}/
 
 Nsight Systems (nsys) reports example:
 
-```
+```text
 logs/{job_id}_{workers}_{timestamp}/
 ├── profile_all.out         # Unified profiling script output
 └── profiles/
@@ -208,24 +208,10 @@ logs/{job_id}_{workers}_{timestamp}/
 
 ## Troubleshooting
 
-### "Profiling mode requires single worker only"
+### Validation errors about profiling sections
 
-Reduce your worker counts to 1:
-
-```yaml
-resources:
-  prefill_workers: 1
-  decode_workers: 1
-```
-
-### "Cannot enable profiling with benchmark type"
-
-Set benchmark to manual:
-
-```yaml
-benchmark:
-  type: "manual"
-```
+- Disaggregated mode requires both `profiling.prefill` and `profiling.decode` to be set.
+- Aggregated mode requires `profiling.aggregated` to be set (and `profiling.prefill`/`profiling.decode` must not be set).
 
 ### Empty profile output
 Ensure the benchmark workload is generating requests during the profiling window.
