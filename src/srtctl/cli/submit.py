@@ -48,6 +48,84 @@ def setup_logging(level: int = logging.INFO) -> None:
     )
 
 
+def show_config_details(config: SrtConfig) -> None:
+    """Display container mounts and environment variables for dry-run verification.
+
+    Shows all mounts (from built-in defaults, srtslurm.yaml, and recipe) and all
+    environment variables (global and backend per-mode) so users can verify their
+    config is correct before submitting.
+    """
+    # --- Container Mounts ---
+    mounts_table = Table(title="Container Mounts", show_lines=False, pad_edge=False)
+    mounts_table.add_column("Source", style="dim", width=14)
+    mounts_table.add_column("Host Path", style="green")
+    mounts_table.add_column("Container Path", style="cyan")
+
+    # Built-in mounts (always present at runtime)
+    model_path = os.path.expandvars(config.model.path)
+    mounts_table.add_row("built-in", model_path, "/model")
+    mounts_table.add_row("built-in", "<log_dir>", "/logs")
+
+    # Cluster-level mounts from srtslurm.yaml
+    cluster_mounts = get_srtslurm_setting("default_mounts")
+    if cluster_mounts:
+        for host_path, container_path in cluster_mounts.items():
+            expanded = os.path.expandvars(host_path)
+            mounts_table.add_row("srtslurm.yaml", expanded, container_path)
+
+    # Recipe extra_mount (simple string mounts)
+    if config.extra_mount:
+        for mount_spec in config.extra_mount:
+            parts = mount_spec.split(":", 1)
+            if len(parts) == 2:
+                mounts_table.add_row("recipe", parts[0], parts[1])
+            else:
+                mounts_table.add_row("recipe", mount_spec, mount_spec)
+
+    # Recipe container_mounts (FormattablePath mounts)
+    if config.container_mounts:
+        for host_template, container_template in config.container_mounts.items():
+            mounts_table.add_row("recipe", str(host_template), str(container_template))
+
+    console.print(Panel(mounts_table, border_style="green"))
+
+    # --- Environment Variables ---
+    has_env = bool(config.environment)
+    backend = config.backend
+    mode_envs: list[tuple[str, dict[str, str]]] = []
+    for mode_name, attr in [
+        ("prefill", "prefill_environment"),
+        ("decode", "decode_environment"),
+        ("aggregated", "aggregated_environment"),
+    ]:
+        env = getattr(backend, attr, {})
+        if env:
+            has_env = True
+            mode_envs.append((mode_name, dict(env)))
+
+    if has_env:
+        env_table = Table(title="Environment Variables", show_lines=False, pad_edge=False)
+        env_table.add_column("Scope", style="dim", width=14)
+        env_table.add_column("Variable", style="yellow")
+        env_table.add_column("Value", style="white")
+
+        for var, val in sorted(config.environment.items()):
+            env_table.add_row("global", var, val)
+
+        for mode_name, env in mode_envs:
+            for var, val in sorted(env.items()):
+                env_table.add_row(mode_name, var, val)
+
+        console.print(Panel(env_table, border_style="yellow"))
+    else:
+        console.print("[dim]No custom environment variables configured.[/]")
+
+    # --- srun options ---
+    if config.srun_options:
+        opts = " ".join(f"--{k} {v}" if v else f"--{k}" for k, v in config.srun_options.items())
+        console.print(f"[dim]srun options:[/] {opts}")
+
+
 def generate_minimal_sbatch_script(
     config: SrtConfig,
     config_path: Path,
@@ -167,6 +245,8 @@ def submit_with_orchestrator(
         console.print()
         syntax = Syntax(script_content, "bash", theme="monokai", line_numbers=True)
         console.print(Panel(syntax, title="Generated sbatch Script", border_style="cyan"))
+        console.print()
+        show_config_details(config)
         return
 
     # Write script to temp file

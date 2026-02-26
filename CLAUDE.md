@@ -214,11 +214,35 @@ with patch.dict(os.environ, H100Rack.slurm_env()):
 3. Add bash script to `benchmarks/scripts/mybench/bench.sh`
 4. Register in benchmark type mapping
 
+### Adding Config That Affects srun (Mounts, Env Vars, Options)
+
+When adding new config fields that affect what gets passed to srun (environment variables, container mounts, srun options), you must also update:
+
+1. `show_config_details()` in `src/srtctl/cli/submit.py` -- this renders all mounts/env/options in `srtctl dry-run` output so users can verify config before submitting
+2. `tests/test_dry_run.py` -- add test cases verifying the new config appears in dry-run output
+
+Config sources that feed into dry-run display:
+- **Mounts**: `config.extra_mount`, `config.container_mounts`, `default_mounts` from srtslurm.yaml
+- **Env vars**: `config.environment` (global), `backend.prefill_environment`, `backend.decode_environment`, `backend.aggregated_environment`
+- **srun options**: `config.srun_options`
+
 ## Debugging
 
 ### Check Generated Commands
 
+`srtctl dry-run` shows the sbatch script, all container mounts (with source labels), environment variables (global and per-mode), and srun options:
+
 ```bash
 srtctl dry-run -f config.yaml
 ```
+
+### Find Full srun Commands at Runtime
+
+The full srun command (with all mounts, env vars, and flags) is logged at INFO level in the sweep log:
+
+```bash
+tail -f outputs/<job_id>/logs/sweep_<job_id>.log | grep "srun command"
+```
+
+Per-worker env vars and commands are also logged individually (search for `Env:` and `Command:` lines).
 
