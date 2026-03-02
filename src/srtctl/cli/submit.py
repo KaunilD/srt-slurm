@@ -621,8 +621,12 @@ def parse_config_arg(arg: str) -> tuple[Path, str | None]:
 
 def is_override_config(config_path: Path) -> bool:
     """Check if a YAML file uses override format (has a 'base' top-level key)."""
-    with open(config_path) as f:
-        config = yaml.safe_load(f)
+    try:
+        with open(config_path) as f:
+            config = yaml.safe_load(f)
+    except Exception:
+        logger.debug(f"Failed to parse YAML while checking override format: {config_path}", exc_info=True)
+        return False
     if not isinstance(config, dict):
         return False
     return "base" in config
@@ -677,8 +681,10 @@ def submit_override(
 
         resolved = resolve_config_with_defaults(config_dict, cluster_config)
 
+        logger.info(f"Override variant: {variant_label} -> {job_name}")
+
         if "sweep" in resolved:
-            # Write merged config to temp file and route through submit_sweep
+            # Write merged config to temp file for sweep expansion
             fd, temp_path = tempfile.mkstemp(suffix=".yaml", prefix="srtctl_override_", text=True)
             try:
                 with os.fdopen(fd, "w") as f:
