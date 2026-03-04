@@ -1,7 +1,7 @@
-# Qwen3.5-397B-A17B-FP8 Disaggregated 1P1D: TP4 Prefill + TEP4 Decode
-# Decode: Tensor Expert Parallel (TP4 + EP4), no dp-attention
+# Qwen3.5-397B-A17B-FP8 Disaggregated 1P1D: TEP4 Prefill + TEP4 Decode
+# Both sides use Tensor Expert Parallel (TP4 + EP4), no dp-attention
 
-name: "qwen3.5-1p1d-tp4-tep4"
+name: "qwen3.5-1p1d-tep4-tep4"
 
 model:
   path: "qwen3.5-fp8"
@@ -60,9 +60,10 @@ backend:
       quantization: "fp8"
       kv-cache-dtype: "fp8_e4m3"
 
+      # TEP4: TP4 + EP4, standard TP attention (no dp-attention)
       tensor-parallel-size: 4
-      data-parallel-size: 1
-      expert-parallel-size: 1
+      expert-parallel-size: 4
+      moe-dense-tp-size: 1
 
       mamba-scheduler-strategy: "no_buffer"
       mamba-track-interval: 2048
