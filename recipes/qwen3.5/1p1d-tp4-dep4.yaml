@@ -1,8 +1,7 @@
-# Qwen3.5-397B-A17B-FP8 Disaggregated 1P1D: TP4 Prefill + TP4 Decode + MTP (EAGLE spec dec)
-# Pure tensor parallel, no expert parallel, with speculative decoding
-# 1k1k sa-bench concurrency sweep
+# Qwen3.5-397B-A17B-FP8 Disaggregated 1P1D: TP4 Prefill + DEP4 Decode
+# Decode: Data Expert Parallel (DP4 + TP4 + EP4) with dp-attention
 
-name: "qwen3.5-1p1d-tp4-mtp"
+name: "qwen3.5-1p1d-tp4-dep4"
 
 model:
   path: "qwen3.5-fp8"
@@ -32,6 +31,7 @@ backend:
     SGLANG_DISAGGREGATION_WAITING_TIMEOUT: "100000"
     SGLANG_MOONCAKE_CUSTOM_MEM_POOL: "True"
     SGLANG_USE_MESSAGE_QUEUE_BROADCASTER: "0"
+    SGLANG_DISABLE_TP_MEMORY_INBALANCE_CHECK: "1"
 
   decode_environment:
     TORCH_DISTRIBUTED_DEFAULT_TIMEOUT: "1800"
@@ -48,6 +48,7 @@ backend:
     SGLANG_HACK_SEQ_BOOTSTRAP_ROOM: "1"
     SGLANG_MOONCAKE_CUSTOM_MEM_POOL: "True"
     SGLANG_USE_MESSAGE_QUEUE_BROADCASTER: "0"
+    SGLANG_DISABLE_TP_MEMORY_INBALANCE_CHECK: "1"
 
   sglang_config:
     prefill:
@@ -56,6 +57,8 @@ backend:
 
 
       attention-backend: "trtllm_mha"
+      quantization: "fp8"
+      kv-cache-dtype: "fp8_e4m3"
 
       tensor-parallel-size: 4
       data-parallel-size: 1
@@ -68,7 +71,7 @@ backend:
       disaggregation-mode: "prefill"
       disable-radix-cache: true
       disaggregation-decode-tp: 4
-      disaggregation-decode-dp: 1
+      disaggregation-decode-dp: 4
 
       mem-fraction-static: 0.75
       chunked-prefill-size: 16384
@@ -83,17 +86,20 @@ backend:
 
 
       attention-backend: "trtllm_mha"
+      quantization: "fp8"
+      kv-cache-dtype: "fp8_e4m3"
 
+      # DEP4: DP4 + TP4 + EP4 with dp-attention
       tensor-parallel-size: 4
+      data-parallel-size: 4
+      expert-parallel-size: 4
+      enable-dp-attention: true
+      enable-dp-lm-head: true
+      moe-dense-tp-size: 1
 
       mamba-scheduler-strategy: "no_buffer"
       mamba-track-interval: 2048
       mamba-ssm-dtype: "bfloat16"
-
-      speculative-algorithm: "EAGLE"
-      speculative-num-steps: 2
-      speculative-eagle-topk: 1
-      speculative-num-draft-tokens: 3
 
       disaggregation-mode: "decode"
       disable-radix-cache: true
