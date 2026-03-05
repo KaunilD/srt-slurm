@@ -27,10 +27,10 @@ export OPENAI_API_KEY="${OPENAI_API_KEY:-EMPTY}"
 
 echo "Running GSM8K evaluation..."
 
-SAMPLING_ARGS=""
-[ -n "$TEMPERATURE" ] && SAMPLING_ARGS="${SAMPLING_ARGS} --temperature ${TEMPERATURE}"
-[ -n "$TOP_P" ] && SAMPLING_ARGS="${SAMPLING_ARGS} --top-p ${TOP_P}"
-[ -n "$TOP_K" ] && SAMPLING_ARGS="${SAMPLING_ARGS} --top-k ${TOP_K}"
+SAMPLING_ARGS=()
+[ -n "$TEMPERATURE" ] && SAMPLING_ARGS+=(--temperature "$TEMPERATURE")
+[ -n "$TOP_P" ] && SAMPLING_ARGS+=(--top-p "$TOP_P")
+[ -n "$TOP_K" ] && SAMPLING_ARGS+=(--top-k "$TOP_K")
 
 # Note: --model is omitted to auto-detect from server
 python3 -m sglang.test.run_eval \
@@ -40,7 +40,7 @@ python3 -m sglang.test.run_eval \
     --max-tokens "${MAX_TOKENS}" \
     --num-threads "${NUM_THREADS}" \
     --num-shots "${NUM_SHOTS}" \
-    ${SAMPLING_ARGS}
+    "${SAMPLING_ARGS[@]}"
 
 # Copy result file
 result_file=$(ls -t /tmp/gsm8k_*.json 2>/dev/null | head -n1)

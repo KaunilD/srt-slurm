@@ -43,7 +43,15 @@ class GSM8KRunner(BenchmarkRunner):
         return str(SCRIPTS_DIR / "gsm8k")
 
     def validate_config(self, config: SrtConfig) -> list[str]:
-        return []
+        b = config.benchmark
+        errors: list[str] = []
+        for field in ("num_examples", "max_tokens", "num_threads"):
+            value = getattr(b, field, None)
+            if value is not None and value <= 0:
+                errors.append(f"benchmark.{field} must be > 0")
+        if b.num_shots is not None and b.num_shots < 0:
+            errors.append("benchmark.num_shots must be >= 0")
+        return errors
 
     def build_command(
         self,
@@ -57,10 +65,10 @@ class GSM8KRunner(BenchmarkRunner):
             "bash",
             self.script_path,
             endpoint,
-            str(b.num_examples or 1319),
-            str(b.max_tokens or 16384),
-            str(b.num_threads or 512),
-            str(b.num_shots or 5),
+            str(1319 if b.num_examples is None else b.num_examples),
+            str(16384 if b.max_tokens is None else b.max_tokens),
+            str(512 if b.num_threads is None else b.num_threads),
+            str(5 if b.num_shots is None else b.num_shots),
             str(b.temperature) if b.temperature is not None else "",
             str(b.top_p) if b.top_p is not None else "",
             str(b.top_k) if b.top_k is not None else "",
